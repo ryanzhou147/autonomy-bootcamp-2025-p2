@@ -68,7 +68,8 @@ class HeartbeatReceiver:
             else:
                 self.__missed_count += 1
                 self.__logger.warning(f"Missed heartbeat ({self.__missed_count})", True)
-        
+                if self.__missed_count >= 5:
+                    self.__state = "Disconnected"
         except Exception as e:
             self.__logger.error(f"Error while receiving heartbeat: {e}", True)
         
