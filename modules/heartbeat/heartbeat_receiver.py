@@ -50,8 +50,7 @@ class HeartbeatReceiver:
         self.__MAX_MISSED = 5
 
     def run(
-        self,
-        args,  # Put your own arguments here
+        self  # Put your own arguments here
     ) -> str:
         """
         Attempt to recieve a heartbeat message.
