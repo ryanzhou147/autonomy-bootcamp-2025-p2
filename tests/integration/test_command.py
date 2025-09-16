@@ -73,7 +73,7 @@ def read_queue(
 
 
 def put_queue(
-    args,  # Add any necessary arguments
+    output_queue  # Add any necessary arguments
 ) -> None:
     """
     Place mocked inputs into the input queue periodically with period TELEMETRY_PERIOD.
@@ -127,11 +127,12 @@ def main() -> int:
     # =============================================================================================
     # Mock starting a worker, since cannot actually start a new process
     # Create a worker controller for your worker
-
+    controller = worker_controller.WorkerController()
     # Create a multiprocess manager for synchronized queues
-
+    manager = mp.Manager()
     # Create your queues
-
+    telemetry_queue = queue_proxy_wrapper.QueueProxyWrapper(manager)
+    output_queue = queue_proxy_wrapper.QueueProxyWrapper(manager)
     # Test cases, DO NOT EDIT!
     path = [
         # Test singular points
@@ -217,16 +218,20 @@ def main() -> int:
     ]
 
     # Just set a timer to stop the worker after a while, since the worker infinite loops
-    threading.Timer(TELEMETRY_PERIOD * len(path), stop, (args,)).start()
+    threading.Timer(TELEMETRY_PERIOD * len(path), stop, (controller,)).start()
 
     # Put items into input queue
-    threading.Thread(target=put_queue, args=(args,)).start()
+    threading.Thread(target=put_queue, args=(telemetry_queue, path, TELEMETRY_PERIOD)).start()
 
     # Read the main queue (worker outputs)
-    threading.Thread(target=read_queue, args=(args, main_logger)).start()
+    threading.Thread(target=read_queue, args=(output_queue, main_logger)).start()
 
     command_worker.command_worker(
-        # Place your own arguments here
+        connection=connection,
+        target=TARGET,
+        input_queue=telemetry_queue,
+        output_queue=output_queue,
+        local_logger=main_logger
     )
     # =============================================================================================
     #                          ↑ BOOTCAMPERS MODIFY ABOVE THIS COMMENT ↑

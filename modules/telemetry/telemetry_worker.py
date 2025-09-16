@@ -4,6 +4,7 @@ Telemtry worker that gathers GPS data.
 
 import os
 import pathlib
+import time
 
 from pymavlink import mavutil
 
@@ -18,8 +19,8 @@ from ..common.modules.logger import logger
 # =================================================================================================
 def telemetry_worker(
     connection: mavutil.mavfile,
-    args,  # Place your own arguments here
-    # Add other necessary worker arguments here
+    output_queue: queue_proxy_wrapper.QueueProxyWrapper,  # Place your own arguments here
+    controller: worker_controller.WorkerController,# Add other necessary worker arguments here
 ) -> None:
     """
     Worker process.
@@ -47,8 +48,35 @@ def telemetry_worker(
     #                          ↓ BOOTCAMPERS MODIFY BELOW THIS COMMENT ↓
     # =============================================================================================
     # Instantiate class object (telemetry.Telemetry)
-
+    success, telemetry_instance = telemetry.Telemetry.create(connection, local_logger)
+    if not success or telemetry_instance is None:
+        local_logger.error("Failed to initalize Telemetry", True)
+        return
+    
+    MESSAGE_TIMEOUT = 1.0
+    last_message_time = time.time()
     # Main loop: do work.
+
+    while not controller.is_exit_requested():
+        try:
+            data_received = telemetry_instance.collect_latest()
+            if data_received:
+                output_queue.put(data_received)
+                last_message_time = time.time()
+                local_logger.debug(f"TelemetryData sent: {data_received}", True)
+            else:
+                if time.time() - last_message_time > MESSAGE_TIMEOUT:
+                    local_logger.warning("Telemetry timeout, restarting.", True)
+        except Exception as e:
+            local_logger.error(f"Error in telemetry_worker main loop: {e}", True)
+    
+        if controller.check_pause():
+            time.sleep(0.01)
+            continue
+        
+        time.sleep(0.01)
+    
+    local_logger.info("Telemetry Worker exiting", True)
 
 
 # =================================================================================================
