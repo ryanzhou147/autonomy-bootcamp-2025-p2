@@ -5,7 +5,6 @@ Test the telemetry worker with a mocked drone.
 import multiprocessing as mp
 import subprocess
 import threading
-import time
 
 from pymavlink import mavutil
 
@@ -48,29 +47,29 @@ def start_drone() -> None:
 #                            ↓ BOOTCAMPERS MODIFY BELOW THIS COMMENT ↓
 # =================================================================================================
 def stop(
-    controller: worker_controller.WorkerController,  # Add any necessary arguments
+    controller: worker_controller.WorkerController,
+    telemetry_queue: queue_proxy_wrapper.QueueProxyWrapper,
+    main_logger: logger.Logger,  # Add any necessary arguments
 ) -> None:
     """
     Stop the workers.
     """
-    controller.set_exit()  # Add logic to stop your worker
+    controller.request_exit()  # Add logic to stop your worker
+    telemetry_queue.fill_and_drain_queue()
+    main_logger.info("Stopped", True)
 
 
 def read_queue(
-    output_queue: queue_proxy_wrapper.QueueProxyWrapper,  # Add any necessary arguments
+    telemetry_queue: queue_proxy_wrapper.QueueProxyWrapper,
+    controller: worker_controller.WorkerController,  # Add any necessary arguments
     main_logger: logger.Logger,
 ) -> None:
     """
     Read and print the output queue.
     """
-    while True:
-        try:
-            telemetry_data = output_queue.get(
-                timeout=1
-            )  # Add logic to read from your worker's output queue and print it using the logger
-            main_logger.info(f"Telemetry Output: {telemetry_data}", True)
-        except Exception:
-            break
+    while not controller.is_exit_requested():
+        if not telemetry_queue.queue.empty():
+            main_logger.info(telemetry_queue.queue.get())
 
 
 # =================================================================================================
@@ -121,22 +120,24 @@ def main() -> int:
     # Create a worker controller for your worker
     controller = worker_controller.WorkerController()
     # Create a multiprocess manager for synchronized queues
-    manager = mp.Manager()
+    mp_manager = mp.Manager()
     # Create your queues
-    output_queue = queue_proxy_wrapper.QueueProxyWrapper(manager)
+    telemetry_queue = queue_proxy_wrapper.QueueProxyWrapper(mp_manager)
     # Just set a timer to stop the worker after a while, since the worker infinite loops
     threading.Timer(
-        TELEMETRY_PERIOD * NUM_TRIALS * 2 + NUM_FAILS, stop, (controller, output_queue, main_logger)
+        TELEMETRY_PERIOD * NUM_TRIALS * 2 + NUM_FAILS,
+        stop,
+        (
+            controller,
+            telemetry_queue,
+            main_logger,
+        ),
     ).start()
 
     # Read the main queue (worker outputs)
-    threading.Thread(target=read_queue, args=(output_queue, controller, main_logger)).start()
+    threading.Thread(target=read_queue, args=(telemetry_queue, controller, main_logger)).start()
 
-    telemetry_worker.telemetry_worker(
-        connection=connection,
-        controller=controller,
-        output_queue=output_queue,  # Put your own arguments here
-    )
+    telemetry_worker.telemetry_worker(connection, controller, telemetry_queue)
     # =============================================================================================
     #                          ↑ BOOTCAMPERS MODIFY ABOVE THIS COMMENT ↑
     # =============================================================================================
