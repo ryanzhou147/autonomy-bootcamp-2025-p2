@@ -57,11 +57,11 @@ def heartbeat_sender_worker(
         if controller.check_pause():
             time.sleep(0.01)
             continue
-            
+
         hb_sender.run()
         local_logger.info("Heartbeat Sender Running", True)
         time.sleep(1)
-    
+
     local_logger.info("Heartbeat Sender Worker exiting", True)
 
 

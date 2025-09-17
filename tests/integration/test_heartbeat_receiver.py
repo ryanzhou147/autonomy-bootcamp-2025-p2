@@ -4,7 +4,7 @@ Test the heartbeat reciever worker with a mocked drone.
 
 import multiprocessing as mp
 import subprocess
-import threading
+import threading, queue
 
 from pymavlink import mavutil
 
@@ -54,28 +54,29 @@ def start_drone() -> None:
 # =================================================================================================
 #                            ↓ BOOTCAMPERS MODIFY BELOW THIS COMMENT ↓
 # =================================================================================================
-def stop(
-    controller: worker_controller.WorkerController  # Add any necessary arguments
-) -> None:
+def stop(controller: worker_controller.WorkerController) -> None:  # Add any necessary arguments
     """
     Stop the workers.
     """
-    controller.set_exit();  # Add logic to stop your worker
+    controller.set_exit()
+    # Add logic to stop your worker
 
 
 def read_queue(
-    output_queue,  # Add any necessary arguments
+    output_queue: queue.Queue[str],
     main_logger: logger.Logger,
-) -> None:
+) -> tuple[list, str]:
     """
     Read and print the output queue.
     """
     while True:  # Add logic to read from your worker's output queue and print it using the logger
-        try: 
+        try:
             msg = output_queue.get(timeout=1)
             main_logger.info(f"Worker output: {msg}")
         except Exception:
             break
+    
+
 
 # =================================================================================================
 #                            ↑ BOOTCAMPERS MODIFY ABOVE THIS COMMENT ↑

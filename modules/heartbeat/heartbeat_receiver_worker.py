@@ -59,16 +59,16 @@ def heartbeat_receiver_worker(
         if controller.check_pause():
             time.sleep(0.01)
             continue
-    
+
         state = hb_receiver.run()
 
         try:
             output_queue.put(state)
         except Exception as e:
             local_logger.error(f"Failed to put state in queue: {e}", True)
-        
+
         time.sleep(1)
-    
+
     local_logger.info("heartbeat Reciever Worker exiting", True)
 
 

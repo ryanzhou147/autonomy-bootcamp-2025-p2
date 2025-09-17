@@ -39,7 +39,7 @@ TELEMETRY_WORKER_COUNT = 1
 COMMAND_WORKER_COUNT = 1
 
 # Any other constants
-RUN_TIME = 100 #seconds
+RUN_TIME = 100  # seconds
 
 # =================================================================================================
 #                            ↑ BOOTCAMPERS MODIFY ABOVE THIS COMMENT ↑
@@ -88,36 +88,44 @@ def main() -> int:
     heartbeat_queue = queue_proxy_wrapper.QueueProxyWrapper(manager, maxsize=QUEUE_MAX_SIZE)
     telemetry_queue = queue_proxy_wrapper.QueueProxyWrapper(manager, maxsize=QUEUE_MAX_SIZE)
     command_output_queue = queue_proxy_wrapper.QueueProxyWrapper(manager, maxsize=QUEUE_MAX_SIZE)
+    command_input_queue = queue_proxy_wrapper.QueueProxyWrapper(manager, maxsize=QUEUE_MAX_SIZE)
     # Create worker properties for each worker type (what inputs it takes, how many workers)
     workers = []
     # Heartbeat sender
     for _ in range(HEARTBEAT_SENDER_COUNT):
-        workers.append(worker_manager.Worker(
-            target=heartbeat_sender_worker.heartbeat_sender_worker,
-            args=(connection, heartbeat_queue)
-        ))
+        workers.append(
+            worker_manager.Worker(
+                target=heartbeat_sender_worker.heartbeat_sender_worker,
+                args=(connection, heartbeat_queue),
+            )
+        )
 
     # Heartbeat receiver
     for _ in range(HEARTBEAT_RECEIVER_COUNT):
-        workers.append(worker_manager.Worker(
-            target=heartbeat_receiver_worker.heartbeat_receiver_worker,
-            args=(connection, heartbeat_queue)
-        ))
+        workers.append(
+            worker_manager.Worker(
+                target=heartbeat_receiver_worker.heartbeat_receiver_worker,
+                args=(connection, heartbeat_queue),
+            )
+        )
 
     # Telemetry
     for _ in range(TELEMETRY_WORKER_COUNT):
-        workers.append(worker_manager.Worker(
-            target=telemetry_worker.telemetry_worker,
-            args=(connection, telemetry_queue)
-        ))
+        workers.append(
+            worker_manager.Worker(
+                target=telemetry_worker.telemetry_worker, args=(connection, telemetry_queue)
+            )
+        )
 
     # Command
     TARGET_POSITION = command.Position(10, 20, 30)
     for _ in range(COMMAND_WORKER_COUNT):
-        workers.append(worker_manager.Worker(
-            target=command_worker.command_worker,
-            args=(connection, TARGET_POSITION, telemetry_queue, command_output_queue)
-        ))
+        workers.append(
+            worker_manager.Worker(
+                target=command_worker.command_worker,
+                args=(connection, TARGET_POSITION, command_input_queue, command_output_queue),
+            )
+        )
 
     # Create the workers (processes) and obtain their managers
     controller.add_workers(workers)

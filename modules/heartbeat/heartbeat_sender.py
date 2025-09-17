@@ -19,29 +19,25 @@ class HeartbeatSender:
     def create(
         cls,
         connection: mavutil.mavfile,
-        local_logger,  # Put your own arguments here
-    ) -> "tuple[True, HeartbeatSender] | tuple[False, None]":
+    ) -> tuple[bool, mavutil.mavfile]:
         """
         Falliable create (instantiation) method to create a HeartbeatSender object.
         """
-        try:
-            return True, HeartbeatSender(cls.__private_key, connection, local_logger)  # Create a HeartbeatSender object
-        except Exception as e:
-            local_logger.error(f"Failed to create HeartbeatSender: {e}", True)
-            return False, None
+
+        return True, HeartbeatSender(
+                cls.__private_key, connection,
+        )  # Create a HeartbeatSender object
 
     def __init__(
         self,
         key: object,
         connection: mavutil.mavfile,
-        local_logger,  # Put your own arguments here
-    ):
+    ) -> None:
         assert key is HeartbeatSender.__private_key, "Use create() method"
 
         # Do any intializiation here
 
         self.__connection = connection
-        self.__logger = local_logger
 
     def run(self) -> None:
         """
@@ -49,9 +45,7 @@ class HeartbeatSender:
         """
         try:
             self.__connection.mav.heartbeat_send(
-                mavutil.mavlink.MAV_TYPE_GENERIC,
-                mavutil.mavlink.MAV_AUTOPILOT_GENERIC,
-                0, 0, 0
+                mavutil.mavlink.MAV_TYPE_GENERIC, mavutil.mavlink.MAV_AUTOPILOT_GENERIC, 0, 0, 0
             )  # Send a heartbeat message
             self.__logger.debug("Heartbeat sent", True)
         except Exception as e:
