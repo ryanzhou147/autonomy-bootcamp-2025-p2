@@ -16,65 +16,52 @@ class HeartbeatReceiver:
     """
 
     __private_key = object()
+    output_queue = []
 
     @classmethod
     def create(
         cls,
         connection: mavutil.mavfile,
+        # args,  # Put your own arguments here
         local_logger: logger.Logger,
-    ) -> tuple[bool, object]:
+    ) -> object:
         """
         Falliable create (instantiation) method to create a HeartbeatReceiver object.
         """
-        try:  # Create a HeartbeatReceiver object
-            return True, HeartbeatReceiver(cls.__private_key, connection, local_logger)
-        except Exception as e:
-            local_logger.error(f"Failed to create HeartbeatReceiver: {e}", True)
-            return False, None
+        return HeartbeatReceiver(cls.__private_key, connection, local_logger)
 
     def __init__(
         self,
         key: object,
         connection: mavutil.mavfile,
+        # args,  # Put your own arguments here
         local_logger: logger.Logger,
     ) -> None:
         assert key is HeartbeatReceiver.__private_key, "Use create() method"
 
         # Do any intializiation here
+        self.connection = connection
+        self.local_logger = local_logger
+        self.missed = 0
 
-        self.__connection = connection
-        self.__logger = local_logger
-        self.__missed_count = 0
-        self.__state = "Disconnected"
-
-        self.__MAX_MISSED = 5
-
-    def run(self) -> str:  # Put your own arguments here
+    def run(
+        self,
+        # args,  # Put your own arguments here
+    ) -> str:
         """
         Attempt to recieve a heartbeat message.
         If disconnected for over a threshold number of periods,
         the connection is considered disconnected.
         """
-        try:
-            msg = self.__connection.recv_match(
-                type="HEARTBEAT",
-                blocking=False,
-            )
-
-            if msg:
-                if self.__state != "Connected":
-                    self.__logger.info("Heartbeat received -> Connected", True)
-                self.__missed_count = 0
-                self.__state = "Connected"
-            else:
-                self.__missed_count += 1
-                self.__logger.warning(f"Missed heartbeat ({self.__missed_count})", True)
-                if self.__missed_count >= 5:
-                    self.__state = "Disconnected"
-        except Exception as e:
-            self.__logger.error(f"Error while receiving heartbeat: {e}", True)
-
-        return self.__state
+        msg = self.connection.recv_match(type="HEARTBEAT")
+        if not msg:
+            self.missed += 1
+            self.local_logger.warning(f"Missed Heartbeat {self.missed}")
+            if self.missed >= 5:
+                return "Disconnected"
+            return None
+        self.missed = 0
+        return "Connected"
 
 
 # =================================================================================================

@@ -21,12 +21,16 @@ def heartbeat_receiver_worker(
     connection: mavutil.mavfile,
     controller: worker_controller.WorkerController,  # Place your own arguments here
     output_queue: queue_proxy_wrapper.QueueProxyWrapper,
+    heartbeat_time: int,
     # Add other necessary worker arguments here
 ) -> None:
     """
     Worker process.
 
-    args... describe what the arguments are
+    connection - connection to drone
+    controller - worker controller
+    output_queue - worker output queue
+    HEATBEAT_TIME - time for a single heartbeat
     """
     # =============================================================================================
     #                          ↑ BOOTCAMPERS MODIFY ABOVE THIS COMMENT ↑
@@ -49,27 +53,16 @@ def heartbeat_receiver_worker(
     #                          ↓ BOOTCAMPERS MODIFY BELOW THIS COMMENT ↓
     # =============================================================================================
     # Instantiate class object (heartbeat_receiver.HeartbeatReceiver)
-    success, hb_receiver = heartbeat_receiver.HeartbeatReceiver.create(connection, local_logger)
-    if not success or hb_receiver is None:
-        local_logger.error("Failed to intialize HeartbeatReceiver", True)
-        return
-    # Main loop: do work.
 
+    heart_beat_receiver_object = heartbeat_receiver.HeartbeatReceiver.create(
+        connection, local_logger
+    )
     while not controller.is_exit_requested():
-        if controller.check_pause():
-            time.sleep(0.01)
-            continue
-
-        state = hb_receiver.run()
-
-        try:
-            output_queue.put(state)
-        except Exception as e:
-            local_logger.error(f"Failed to put state in queue: {e}", True)
-
-        time.sleep(1)
-
-    local_logger.info("heartbeat Reciever Worker exiting", True)
+        result = heart_beat_receiver_object.run()
+        if result:
+            output_queue.queue.put(result)
+        time.sleep(heartbeat_time)
+    # Main loop: do work.
 
 
 # =================================================================================================

@@ -24,7 +24,8 @@ def heartbeat_sender_worker(
     """
     Worker process.
 
-    args... describe what the arguments are
+    connection - Connection to the drone
+    controller - Current state of processes
     """
     # =============================================================================================
     #                          ↑ BOOTCAMPERS MODIFY ABOVE THIS COMMENT ↑
@@ -47,22 +48,11 @@ def heartbeat_sender_worker(
     #                          ↓ BOOTCAMPERS MODIFY BELOW THIS COMMENT ↓
     # =============================================================================================
     # Instantiate class object (heartbeat_sender.HeartbeatSender)
-    success, hb_sender = heartbeat_sender.HeartbeatSender.create(connection, local_logger)
-    if not success or hb_sender is None:
-        local_logger.error("Failed to intialize HeartbeatSender", True)
-        return
-    # Main loop: do work.
-
+    heart_beat_sender_object = heartbeat_sender.HeartbeatSender.create(connection)
     while not controller.is_exit_requested():
-        if controller.check_pause():
-            time.sleep(0.01)
-            continue
-
-        hb_sender.run()
-        local_logger.info("Heartbeat Sender Running", True)
+        heart_beat_sender_object.run()
         time.sleep(1)
-
-    local_logger.info("Heartbeat Sender Worker exiting", True)
+    # Main loop: do work.
 
 
 # =================================================================================================
