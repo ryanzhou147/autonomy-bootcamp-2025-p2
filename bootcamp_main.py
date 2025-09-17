@@ -118,12 +118,12 @@ def main() -> int:
         )
 
     # Command
-    TARGET_POSITION = command.Position(10, 20, 30)
+    target_position = command.Position(10, 20, 30)
     for _ in range(COMMAND_WORKER_COUNT):
         workers.append(
             worker_manager.Worker(
                 target=command_worker.command_worker,
-                args=(connection, TARGET_POSITION, command_input_queue, command_output_queue),
+                args=(connection, target_position, command_input_queue, command_output_queue),
             )
         )
 
