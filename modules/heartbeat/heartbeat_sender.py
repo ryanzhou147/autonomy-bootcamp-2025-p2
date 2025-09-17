@@ -25,7 +25,8 @@ class HeartbeatSender:
         """
 
         return True, HeartbeatSender(
-                cls.__private_key, connection,
+            cls.__private_key,
+            connection,
         )  # Create a HeartbeatSender object
 
     def __init__(

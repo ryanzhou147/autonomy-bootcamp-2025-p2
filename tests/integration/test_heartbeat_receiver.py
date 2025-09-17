@@ -75,7 +75,6 @@ def read_queue(
             main_logger.info(f"Worker output: {msg}")
         except Exception:
             break
-    
 
 
 # =================================================================================================
